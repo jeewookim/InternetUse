@@ -12,27 +12,17 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text = "go to sleep"
+        android:text = "Download File"
         android:background="@color/purple"
-        android:id = "@+id/sleep"/>
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:max="1000"
-        android:layout_centerVertical="true"
-        android:indeterminate="false"
-        android:padding="20dip">
-    </ProgressBar>
+        android:id = "@+id/download"/>
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text = "RESET"
-        android:background="@color/foo"
-        android:id = "@+id/reset"
-        android:layout_marginTop = "430dp" />
+        android:text = "Test"
+        android:layout_alignParentBottom="true"
+        android:background="@color/purple"
+        android:id = "@+id/a"/>
+
 
 </RelativeLayout>

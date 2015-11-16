@@ -8,6 +8,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -15,34 +16,51 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
+import java.util.List;
+import java.net.*;
+import java.io.*;
 
 public class MainActivity extends AppCompatActivity {
-public ProgressBar bar;
+private ProgressDialog dialog;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        bar = (ProgressBar)findViewById(R.id.progressBar);
-        Button sleep = (Button)findViewById(R.id.sleep);
-        sleep.setOnClickListener(new View.OnClickListener() {
+
+
+
+        Button dl = (Button)findViewById(R.id.download);
+        dl.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Integer t = 1000;
-                new DownloadFilesTask(MainActivity.this).execute(t, 5);
+                Log.i("hi", "dfgs");
+                dialog = new ProgressDialog(MainActivity.this);
+                dialog.setMessage("Downloading file now");
+                dialog.setIndeterminate(true);
+                dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                dialog.setCancelable(true);
+                new DownloadFilesTask(MainActivity.this).execute("http://shakespeare.mit.edu/hamlet/full.html");
             }
         });
 
-        Button reset = (Button)findViewById(R.id.reset);
-        reset.setOnClickListener(new View.OnClickListener() {
+        Button a = (Button)findViewById(R.id.a);
+        a.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
-                bar.setProgress(0);
+                Log.i("hi", "asdf");
             }
         });
-
     }
 
     @Override
@@ -68,36 +86,106 @@ public ProgressBar bar;
     }
 
 
-    public class DownloadFilesTask extends AsyncTask<Integer, Integer, Integer> {
+    public class DownloadFilesTask extends AsyncTask<String, Integer, String> {
         DownloadFilesTask( AppCompatActivity activity)
         {
             context = activity;
         }
         private Context context;
 
-        protected Integer doInBackground(Integer... time)  {
-            Integer x = time[0];
-            for (int i = 0; i < x+5; i+=3) {
-                try {
-                    Thread.sleep(3);
-                    publishProgress(i);
+        protected String doInBackground(String...surl) {
+            Log.i("got to", "execute");
+            InputStream input = null;
+            OutputStream output = null;
+            StringBuilder stringBuilder = new StringBuilder();
+            HttpURLConnection connection = null;
+            try {
+                //CONNECTING TO INTERNET
+                URL url = new URL(surl[0]);
+                Log.i("url ", "is " + url);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+                System.out.println(connection.getResponseCode());
+
+                //GETTING SIZE OF SITE
+                int fileLength = tryGetFileSize(url);
+                Log.i("url size ", " is: " + fileLength);
+
+
+                //READING SITE
+                input = connection.getInputStream();
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String inputLine = "";
+
+
+                long total = 0;
+                while ((inputLine = in.readLine()) != null) {
+                    if (isCancelled()) {
+                        input.close();
+                        return null;
+                    }
+                    stringBuilder.append(inputLine + "\n");
+                    total = stringBuilder.length();
+                    if (total > 0)
+                        publishProgress((int) (total * 100 / fileLength));
+                    Log.i("Hamlet: ", "" + inputLine + "\n");
                 }
-                catch (InterruptedException e) {}
+                Log.i("total; ", "is " + total);
+
+
+                in.close();
+
+                //output = new FileOutputStream("hamlet.txt");
+
+            } catch (Exception e) {
+                return "";
+//            }
+//            finally{
+//                try{
+//                    if(output!=null)
+//                        output.close();
+//                    if(input!= null)
+//                        input.close();
+//                }
+//                catch(IOException ignored){}
+//            }
+
             }
-            return x;
+            return stringBuilder.toString();
+        }
+        private int tryGetFileSize(URL url) {
+            HttpURLConnection conn = null;
+            try {
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("HEAD");
+                conn.getInputStream();
+                return conn.getContentLength();
+            } catch (IOException e) {
+                return -1;
+            } finally {
+                conn.disconnect();
+            }
+        }
+        protected void onProgressUpdate(Integer...i) {
+            super.onProgressUpdate(i);
+            // if we get here, length is known, now set indeterminate to false
+            dialog.setIndeterminate(false);
+            dialog.setMax(100);
+            dialog.setProgress(i[0]);
         }
 
-        protected void onProgressUpdate(Integer... progress) {
-            bar.setProgress(progress[0]);
-        }
-
-        protected void onPostExecute(Integer time) {
-            int duration = Toast.LENGTH_SHORT;
-            CharSequence text = "Done";
-            Toast toast = Toast.makeText(context, text, duration);
-            toast.show();
-
-
+        protected void onPostExecute(String s) {
+                try {
+                    OutputStreamWriter outputStreamWriter = new OutputStreamWriter(openFileOutput("hamlet.txt", Context.MODE_PRIVATE));
+                    outputStreamWriter.write(s);
+                    outputStreamWriter.close();
+                    Log.i("length of sbuilder:", s.length() + "");
+                    //Log.i("Hamlet: ", s + "");
+                    Log.i("wrote to output file", ": yes" );
+                }
+                catch (IOException e) {
+                    Log.e("Exception", "File write failed: " + e.toString());
+                }
         }
     }
 }
